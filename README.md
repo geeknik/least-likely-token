@@ -4,6 +4,9 @@
 
 This project implements a **least likely next token predictor** using reinforcement learning. It leverages a pre-trained language model (GPT-2) to estimate token probabilities and trains a second model to predict tokens with the lowest probabilities, making it the "apex predator" of unlikely token predictors.
 
+![image](https://github.com/user-attachments/assets/e96a5cdc-665f-4b7c-bafe-a5c2ee4d0af9)
+
+
 ## Installation
 
 To run this project, ensure you have Python installed. Then, install the required dependencies:
