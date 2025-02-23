@@ -6,6 +6,9 @@ from torch.distributions import Categorical
 
 # Initialize models and tokenizer
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+# Set pad_token to eos_token to handle padding
+tokenizer.pad_token = tokenizer.eos_token  # Add this line to fix the padding token issue
+
 model_M = GPT2LMHeadModel.from_pretrained("gpt2")  # Standard model (fixed)
 model_N = GPT2LMHeadModel.from_pretrained("gpt2")  # Least likely predictor (trainable)
 optimizer_N = optim.Adam(model_N.parameters(), lr=1e-5)
@@ -34,10 +37,13 @@ def train_least_likely_predictor(train_sequences, val_sequences, num_epochs=10, 
         
         for i in range(0, len(train_sequences), batch_size):
             batch = train_sequences[i:i + batch_size]
-            input_ids = tokenizer(batch, return_tensors="pt", padding=True, truncation=True).input_ids
+            # Tokenize with padding and attention mask
+            encoded = tokenizer(batch, return_tensors="pt", padding=True, truncation=True)
+            input_ids = encoded.input_ids
+            attention_mask = encoded.attention_mask  # Retrieve attention_mask
             
             # Get output distribution from Model N
-            outputs_N = model_N(input_ids)
+            outputs_N = model_N(input_ids, attention_mask=attention_mask)  # Pass attention_mask
             logits_N = outputs_N.logits[:, -1, :]  # Logits for next token
             probs_N = nn.functional.softmax(logits_N, dim=-1)
             
@@ -47,7 +53,7 @@ def train_least_likely_predictor(train_sequences, val_sequences, num_epochs=10, 
             
             # Compute P_M(t|s) for sampled tokens
             with torch.no_grad():
-                outputs_M = model_M(input_ids)
+                outputs_M = model_M(input_ids, attention_mask=attention_mask)  # Pass attention_mask
                 logits_M = outputs_M.logits[:, -1, :]
                 probs_M = nn.functional.softmax(logits_M, dim=-1)
                 P_M_t_given_s = probs_M[torch.arange(len(batch)), sampled_tokens]
@@ -97,13 +103,16 @@ def validate(model_N, model_M, val_sequences):
     total_prob = 0
     with torch.no_grad():
         for seq in val_sequences:
-            input_ids = tokenizer.encode(seq, return_tensors="pt")
-            outputs_N = model_N(input_ids)
+            # Tokenize single sequence with attention mask
+            encoded = tokenizer(seq, return_tensors="pt")
+            input_ids = encoded.input_ids
+            attention_mask = encoded.attention_mask  # Retrieve attention_mask
+            outputs_N = model_N(input_ids, attention_mask=attention_mask)  # Pass attention_mask
             logits_N = outputs_N.logits[:, -1, :]
             probs_N = nn.functional.softmax(logits_N, dim=-1)
             t_pred = torch.argmax(probs_N, dim=-1).item()
             
-            outputs_M = model_M(input_ids)
+            outputs_M = model_M(input_ids, attention_mask=attention_mask)  # Pass attention_mask
             logits_M = outputs_M.logits[:, -1, :]
             probs_M = nn.functional.softmax(logits_M, dim=-1)
             P_M_t_pred = probs_M[0, t_pred].item()
@@ -124,8 +133,11 @@ def predict_least_likely_token(sequence):
     """
     model_N.eval()
     with torch.no_grad():
-        input_ids = tokenizer.encode(sequence, return_tensors="pt")
-        outputs_N = model_N(input_ids)
+        # Tokenize single sequence with attention mask
+        encoded = tokenizer(sequence, return_tensors="pt")
+        input_ids = encoded.input_ids
+        attention_mask = encoded.attention_mask  # Retrieve attention_mask
+        outputs_N = model_N(input_ids, attention_mask=attention_mask)  # Pass attention_mask
         logits_N = outputs_N.logits[:, -1, :]
         probs_N = nn.functional.softmax(logits_N, dim=-1)
         t_pred = torch.argmax(probs_N, dim=-1).item()
