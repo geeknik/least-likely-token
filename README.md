@@ -32,37 +32,27 @@ print(f"Predicted least likely next token: '{predicted_token}'")
 ```
 
 ## How It Works
-The predictor is trained using reinforcement learning with the following components:  
 
-Standard Language Model (M): A pre-trained GPT-2 model that provides the probability distribution 
-P_M(t|s)
- of the next token (t) given a sequence (s). This model remains fixed.  
-Least Likely Predictor (N): Another GPT-2 model trained to predict tokens with low probabilities according to model M.
+The predictor is trained using reinforcement learning with the following components:
 
-## Training Process
-Sampling: For each input sequence, model N samples a next token from its predicted distribution.  
+- **Standard Language Model (M)**: A pre-trained GPT-2 model that provides the probability distribution $P_M(t|s)$ of the next token $t$ given a sequence $s$. This model remains fixed.
+- **Least Likely Predictor (N)**: Another GPT-2 model trained to predict tokens with low probabilities according to model M.
 
-Reward Calculation: The reward is computed as 
--\log(P_M(t|s) + \epsilon)
-, where 
-\epsilon = 10^{-10}
- prevents log(0). This reward is higher for tokens that are less likely under model M.  
+### Training Process
 
-Policy Gradient Update: Using the REINFORCE algorithm with a baseline (mean reward), model N is updated to maximize the expected reward, encouraging it to predict unlikely tokens.
+1. **Sampling**: For each input sequence, model N samples a next token from its predicted distribution.
+2. **Reward Calculation**: The reward is computed as $-\log(P_M(t|s) + \epsilon)$, where $\epsilon = 10^{-10}$ prevents $\log(0)$. This reward is higher for tokens that are less likely under model M.
+3. **Policy Gradient Update**: Using the REINFORCE algorithm with a baseline (mean reward), model N is updated to maximize the expected reward, encouraging it to predict unlikely tokens.
+
 This approach ensures that model N learns to consistently predict tokens that are improbable according to the standard language model.
 
 ## Enhancements
-Optimized Reward Function: The reward 
--\log(P_M(t|s) + \epsilon)
- provides a stronger gradient signal for very unlikely tokens, improving learning efficiency.  
 
-Variance Reduction: A baseline (mean reward per batch) is used in the policy gradient to stabilize training by reducing variance in the gradient estimates.  
+- **Optimized Reward Function**: The reward $-\log(P_M(t|s) + \epsilon)$ provides a stronger gradient signal for very unlikely tokens, improving learning efficiency.
+- **Variance Reduction**: A baseline (mean reward per batch) is used in the policy gradient to stabilize training by reducing variance in the gradient estimates.
+- **Validation**: The average $P_M(t|s)$ of predicted tokens is monitored on a validation set after each epoch to ensure the model generalizes well and avoids overfitting.
 
-Validation: The average 
-P_M(t|s)
- of predicted tokens is monitored on a validation set after each epoch to ensure the model generalizes well and avoids overfitting.  
-
-These enhancements make this implementation robust, efficient, and highly effective at predicting the least likely tokens.  
+These enhancements make this implementation robust, efficient, and highly effective at predicting the least likely tokens.
 
 ## Project Structure
 main.py: The main script containing the training and inference code.  
