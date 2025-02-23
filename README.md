@@ -19,7 +19,7 @@ transformers: For pre-trained GPT-2 models and tokenization.
 ## Usage
 To train the least likely next token predictor, run the following command:
 ```bash
-python least_likely_predictor.py
+python main.py
 ```
 This will train the model using the default sequences provided in the script. You can modify the train_sequences and val_sequences lists in the script to use your own data.
 
